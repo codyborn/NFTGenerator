@@ -1,0 +1,160 @@
+{
+    "$connections": {
+        "value": {
+            "azurequeues": {                
+                <YOUR-CONNECTION>
+            },
+            "blockchainethereum": {
+                <YOUR-CONNECTION>
+            }
+        }
+    },
+    "definition": {
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "actions": {
+            "Execute_smart_contract_function_(incurring_gas_cost)": {
+                "inputs": {
+                    "body": {
+                        "to": "@triggerOutputs()['relativePathParameters']['address']",
+                        "tokenId": "@variables('token_id')",
+                        "tokenURI": "@variables('metadata_url')"
+                    },
+                    "host": {
+                        "connection": {
+                            "name": "@parameters('$connections')['blockchainethereum']['connectionId']"
+                        }
+                    },
+                    "method": "post",
+                    "path": "/contract/functions/@{encodeURIComponent(encodeURIComponent('mintWithTokenURI'))}/execute",
+                    "queries": {
+                        "abi": "[{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\"},{\"name\":\"tokenURI\",\"type\":\"string\"}],\"name\":\"mintWithTokenURI\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+                        "contractAddress": "@variables('contract_address')"
+                    }
+                },
+                "runAfter": {
+                    "For_each": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "ApiConnection"
+            },
+            "For_each": {
+                "actions": {
+                    "Set_variable": {
+                        "inputs": {
+                            "name": "metadata_url",
+                            "value": "@items('For_each')?['MessageText']"
+                        },
+                        "runAfter": {},
+                        "type": "SetVariable"
+                    }
+                },
+                "foreach": "@body('Get_messages')?['QueueMessagesList']?['QueueMessage']",
+                "runAfter": {
+                    "Get_messages": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Foreach"
+            },
+            "Get_messages": {
+                "inputs": {
+                    "host": {
+                        "connection": {
+                            "name": "@parameters('$connections')['azurequeues']['connectionId']"
+                        }
+                    },
+                    "method": "get",
+                    "path": "/@{encodeURIComponent('metadataurls')}/messages",
+                    "queries": {
+                        "numofmessages": "1"
+                    }
+                },
+                "runAfter": {
+                    "Initialize_metadata_url": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "ApiConnection"
+            },
+            "Initialize_metadata_url": {
+                "inputs": {
+                    "variables": [
+                        {
+                            "name": "metadata_url",
+                            "type": "String"
+                        }
+                    ]
+                },
+                "runAfter": {
+                    "Initialize_token_id": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "InitializeVariable"
+            },
+            "Initialize_token_id": {
+                "inputs": {
+                    "variables": [
+                        {
+                            "name": "token_id",
+                            "type": "String",
+                            "value": "@{rand(0,2147483647)}"
+                        }
+                    ]
+                },
+                "runAfter": {
+                    "Set_contract_address": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "InitializeVariable"
+            },
+            "Response": {
+                "inputs": {
+                    "body": "https://rinkeby.opensea.io/assets/@{variables('contract_address')}/@{variables('token_id')}",
+                    "statusCode": 200
+                },
+                "kind": "Http",
+                "runAfter": {
+                    "Execute_smart_contract_function_(incurring_gas_cost)": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Response"
+            },
+            "Set_contract_address": {
+                "inputs": {
+                    "variables": [
+                        {
+                            "name": "contract_address",
+                            "type": "String",
+                            "value": "<YOUR CONTRACT ADDRESS>"
+                        }
+                    ]
+                },
+                "runAfter": {},
+                "type": "InitializeVariable"
+            }
+        },
+        "contentVersion": "1.0.0.0",
+        "outputs": {},
+        "parameters": {
+            "$connections": {
+                "defaultValue": {},
+                "type": "Object"
+            }
+        },
+        "triggers": {
+            "manual": {
+                "inputs": {
+                    "method": "GET",
+                    "relativePath": "/address/{address}",
+                    "schema": {}
+                },
+                "kind": "Http",
+                "type": "Request"
+            }
+        }
+    }
+}
