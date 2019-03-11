@@ -1,0 +1,61 @@
+<script type="text/javascript" src="~/js/web3.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script type="text/javascript">
+  var nftRedeemerBot = "<YOUR LOGIC APP URL>";
+function redeem(web3) {
+    web3.eth.getAccounts(function (error, accounts) {
+      if (error) {
+        console.log(error);
+      }
+      document.getElementById("address").innerHTML = "Account: " + accounts[0];
+var redemptionMessage = document.getElementById("redemptionMessage");
+var parameterizedAddress = nftRedeemerBot.replace("{address}", accounts[0]);
+      redemptionMessage.innerHTML = "Minting token on the blockchain...";
+      document.getElementById("loading").style.display = "inline";
+      $.get(parameterizedAddress, function (data, status) {
+        document.getElementById("loading").style.display = "none";
+        if (status == "success") {
+          redemptionMessage.innerHTML = "Token created, redirecting to your token...";
+          window.location.replace(data);
+        }
+        else {
+          redemptionMessage.innerHTML = "Token creation failed";
+        }
+      }).fail(function (xhr, textStatus, errorThrown) {
+        document.getElementById("loading").style.display = "none";
+        redemptionMessage.innerHTML = "Token creation failed";
+      });
+    });
+  }
+window.addEventListener('load', async () => {
+    if (window.ethereum) {
+      window.web3 = new Web3(ethereum);
+      try {
+        // Request account access if needed
+        await ethereum.enable();
+        redeem(window.web3);
+      } catch (error) {
+        alert(error);
+        redemptionMessage.innerHTML = "Please grant access to web3 and try again.";
+      }
+    }
+    // Legacy dapp browsers...
+    else if (window.web3) {
+      window.web3 = new Web3(web3.currentProvider);
+      redeem(window.web3);
+    }
+    else {
+      redemptionMessage.innerHTML = "No web3 wallet detected, please access this QR code using Status";
+    }
+  });
+</script>
+<body style="background: #4a484b; color:white">
+  <h1>Token Issuer</h1>
+  <div id="address">
+  </div>
+  <div id="redemptionMessage">
+  </div>
+  <div id="loading" style="position: relative; top: -6em; left: -11em; z-index: -100; display:none">
+    <img src="https://cdn-images-1.medium.com/max/1600/0*JVdgKzSfU4q4psf6.gif" />
+  </div>
+</body>
